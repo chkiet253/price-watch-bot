@@ -7,7 +7,7 @@ Bản MVP lấy các mục sau và gửi thành một tin nhắn Telegram:
 - Hồ tiêu Đắk Lắk: đồng/kg.
 - Sầu riêng Ri6 và Dona: giá đẹp/xô nếu trang nguồn cung cấp.
 
-Bot không dùng AI. Chương trình dùng thư viện chuẩn Python, lấy dữ liệu mỗi lần chạy và không giữ lại token trong mã nguồn. Giá thiếu ngày cập nhật hoặc quá 3 ngày sẽ được đánh dấu cũ, không trình bày như giá hiện tại.
+Bot không dùng AI. Chương trình dùng thư viện chuẩn Python, lấy dữ liệu mỗi lần chạy và không giữ lại token trong mã nguồn. Giá quá 3 ngày vẫn được hiển thị nếu có, kèm nhãn giá cũ và ngày nguồn. Khi nguồn lỗi hoặc không có giá mới, bot dùng giá có ngày gần nhất đã lưu; nếu chưa từng có giá phù hợp, bot ghi rõ chưa có dữ liệu để hiển thị.
 
 ## Cài đặt trên Windows
 
@@ -33,6 +33,8 @@ Không gửi token bot trong tin nhắn hoặc đưa file `.env` lên Git.
 
 GitHub Actions chạy workflow trên máy chủ của GitHub, nên máy tính cá nhân không cần bật. Workflow trong `.github/workflows/daily.yml` được đặt mặc định gửi lúc **09:37 mỗi ngày theo giờ Việt Nam**; có thể chạy thử thủ công từ tab **Actions**.
 
+Workflow lưu các giá có ngày nguồn trong GitHub Actions cache để dùng lại khi trang nguồn không tải được hoặc thiếu giá. Cache không chứa token. Nếu cache bị xóa và nguồn vẫn lỗi, báo cáo sẽ ghi rõ chưa có giá cũ để dùng.
+
 1. Tạo một repository **private** trên GitHub.
 2. Tải các file trong thư mục này lên repository, gồm cả thư mục `.github/workflows`. Không tải file `.env` lên GitHub.
 3. Vào **Settings → Secrets and variables → Actions → New repository secret** và thêm hai secret:
@@ -52,6 +54,6 @@ Nếu chỉ muốn chạy trên máy cá nhân, có thể dùng **Windows Task S
 - Cà phê lấy từ trang Đắk Lắk của Giacaphe.com.
 - Hồ tiêu lấy từ bảng giá của Giacaphe.com; trang này ghi nguồn dữ liệu giá là Giatieu.com.
 - Sầu riêng lấy Ri6 và Dona (Thái/Monthong) từ trang Giacaphe.com. Trang đã kiểm tra gần đây vẫn hiển thị bài ngày 27/08/2025, nên mục này sẽ bị đánh dấu dữ liệu cũ cho tới khi nguồn cập nhật.
-- Cấu trúc HTML của nguồn có thể thay đổi. Khi không đọc được bảng giá, chương trình sẽ báo lỗi/thiếu dữ liệu thay vì tự tạo ra giá.
+- Cấu trúc HTML của nguồn có thể thay đổi. Giá cũ luôn đi kèm ngày nguồn; chương trình không tự tạo hoặc gán ngày mới cho giá cũ.
 
-Trang Giacaphe.com ghi dữ liệu giá chỉ mang tính tham khảo và có thể thay đổi theo thời điểm, khu vực hoặc đơn vị thu mua. Mỗi dòng trong tin nhắn có kèm liên kết nguồn và ngày nguồn đọc được.
+Trang Giacaphe.com ghi dữ liệu giá chỉ mang tính tham khảo và có thể thay đổi theo thời điểm, khu vực hoặc đơn vị thu mua. Báo cáo gom các liên kết nguồn ở cuối tin nhắn để dễ đọc; từng dòng giá giữ ngày nguồn tương ứng.

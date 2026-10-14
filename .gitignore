@@ -1,3 +1,5 @@
 .env
 __pycache__/
 *.py[cod]
+price_cache.json
+price_cache.tmp
