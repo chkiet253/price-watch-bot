@@ -36,6 +36,7 @@ SOURCES = {
     "pepper": "https://giacaphe.com/gia-tieu-hom-nay/",
     "durian": "https://giacaphe.com/gia-sau-rieng-hom-nay/",
 }
+SJC_PRICE_SERVICE = "https://sjc.com.vn/GoldPrice/Services/PriceService.ashx"
 
 QUOTES_BY_SOURCE = {
     "gold": (("Vàng SJC", "đồng/chỉ"),),
@@ -66,7 +67,7 @@ class Quote:
 class PageParser(HTMLParser):
     """Extract visible text, headings, and simple HTML tables."""
 
-    def __init__(self) -> None:
+    def __init__(self, css_prices: dict[str, str] | None = None) -> None:
         super().__init__(convert_charrefs=True)
         self.text_parts: list[str] = []
         self.headings: list[str] = []
@@ -77,6 +78,7 @@ class PageParser(HTMLParser):
         self._table: list[list[str]] | None = None
         self._row: list[str] | None = None
         self._cell: list[str] | None = None
+        self._css_prices = css_prices or {}
 
     def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
         self._tags.append(tag)
@@ -90,6 +92,11 @@ class PageParser(HTMLParser):
             self._row = []
         elif tag in {"td", "th"} and self._table_depth == 1:
             self._cell = []
+        if tag == "span" and self._cell is not None:
+            classes = (dict(attrs).get("class") or "").split()
+            prices = {self._css_prices[key] for key in classes if key in self._css_prices}
+            if len(prices) == 1:
+                self._cell.append(prices.pop())
 
     def handle_endtag(self, tag: str) -> None:
         if tag in {"td", "th"} and self._table_depth == 1 and self._cell is not None:
@@ -174,12 +181,13 @@ def page_source_date(page: PageParser) -> date | None:
     return parse_date(page.visible_text[:1500])
 
 
-def fetch_page(url: str) -> PageParser:
+def fetch_content(url: str, data: bytes | None = None) -> str:
     request = Request(
         url,
+        data=data,
         headers={
             "User-Agent": "PriceWatchTelegram/1.0 (daily public price digest)",
-            "Accept": "text/html,application/xhtml+xml",
+            "Accept": "text/html,application/xhtml+xml,application/json",
         },
     )
     try:
@@ -189,9 +197,25 @@ def fetch_page(url: str) -> PageParser:
         raise RuntimeError(f"Không tải được nguồn ({exc})") from exc
     if len(payload) > MAX_HTML_BYTES:
         raise RuntimeError("Trang nguồn quá lớn, đã dừng tải")
-    parser = PageParser()
-    parser.feed(payload.decode("utf-8", errors="replace"))
+    return payload.decode("utf-8", errors="replace")
+
+
+def parse_page(content: str) -> PageParser:
+    # Giacaphe renders numeric prices through inline CSS, leaving HTML cells empty.
+    css_prices: dict[str, str] = {}
+    for style in re.findall(r"<style\b[^>]*>(.*?)</style>", content, flags=re.S | re.I):
+        for match in re.finditer(
+            r"\.([\w-]+)::after\s*\{\s*content\s*:\s*(['\"])([+-]?\d[\d.,]*)\2\s*;?\s*\}",
+            style,
+        ):
+            css_prices[match.group(1)] = match.group(3)
+    parser = PageParser(css_prices)
+    parser.feed(content)
     return parser
+
+
+def fetch_page(url: str) -> PageParser:
+    return parse_page(fetch_content(url))
 
 
 def table_row_with(rows: list[list[str]], predicate) -> list[str] | None:
@@ -203,26 +227,29 @@ def table_row_with(rows: list[list[str]], predicate) -> list[str] | None:
 
 def parse_gold() -> list[Quote]:
     url = SOURCES["gold"]
-    page = fetch_page(url)
-    source_date = page_source_date(page)
-    candidates: list[list[str]] = []
-    for table in page.tables:
-        for row in table:
-            label = plain_key(row[0]) if row else ""
-            if "vang sjc" in label:
-                candidates.append(row)
+    # The SJC website itself POSTs to this service to fill its empty HTML table.
+    payload = json.loads(fetch_content(SJC_PRICE_SERVICE, data=b""))
+    if not isinstance(payload, dict) or payload.get("success") is not True:
+        raise RuntimeError("Dịch vụ giá SJC chưa trả về dữ liệu hợp lệ")
+    source_date = parse_date(str(payload.get("latestDate", "")))
+    candidates = [
+        item for item in payload.get("data", [])
+        if isinstance(item, dict) and "vang sjc" in plain_key(str(item.get("TypeName", "")))
+    ]
 
     # Prefer SJC pieces sold as 0.5/1/2 chi when the page exposes that row.
     selected = next(
-        (row for row in candidates if "0.5 chi" in plain_key(row[0]) or "0,5 chi" in plain_key(row[0])),
-        next((row for row in candidates if row), None),
+        (item for item in candidates if "0.5 chi" in plain_key(str(item.get("TypeName", "")))
+         or "0,5 chi" in plain_key(str(item.get("TypeName", "")))),
+        next(iter(candidates), None),
     )
-    if not selected or len(selected) < 3:
+    if not selected:
         return [Quote("Vàng SJC", None, "đồng/chỉ", url, source_date, "Không đọc được dòng giá mua/bán")]
 
-    buy_thousand_per_luong = parse_number(selected[-2])
-    sell_thousand_per_luong = parse_number(selected[-1])
-    if buy_thousand_per_luong is None or sell_thousand_per_luong is None:
+    buy_thousand_per_luong = parse_number(str(selected.get("Buy", "")))
+    sell_thousand_per_luong = parse_number(str(selected.get("Sell", "")))
+    if (buy_thousand_per_luong is None or sell_thousand_per_luong is None
+            or buy_thousand_per_luong <= 0 or sell_thousand_per_luong < buy_thousand_per_luong):
         return [Quote("Vàng SJC", None, "đồng/chỉ", url, source_date, "Không đọc được giá mua/bán")]
 
     # SJC labels the table as thousand VND per luong. 1 luong = 10 chi.
@@ -476,6 +503,7 @@ def send_report() -> None:
         raise RuntimeError("Thiếu TELEGRAM_CHAT_ID trong file .env; chạy lệnh get-chat-id trước.")
     report = build_report()
     telegram_request("sendMessage", {"chat_id": chat_id, "text": report, "disable_web_page_preview": "true"})
+    print(report)
     print("Đã gửi báo cáo Telegram.")
 
 

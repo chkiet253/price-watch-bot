@@ -50,10 +50,12 @@ Nếu chỉ muốn chạy trên máy cá nhân, có thể dùng **Windows Task S
 
 ## Nguồn và giới hạn đã biết
 
-- Vàng lấy từ bảng giá trên SJC. Trang SJC niêm yết theo nghìn đồng/lượng; chương trình đổi sang đồng/chỉ bằng phép quy đổi 1 lượng = 10 chỉ.
-- Cà phê lấy từ trang Đắk Lắk của Giacaphe.com.
+- Vàng lấy từ dịch vụ dữ liệu mà chính trang SJC dùng để tải bảng giá (`/GoldPrice/Services/PriceService.ashx`), thay vì bảng HTML trống trên trang chủ. SJC niêm yết theo nghìn đồng/lượng; chương trình đổi sang đồng/chỉ bằng phép quy đổi 1 lượng = 10 chỉ, ưu tiên dòng vàng miếng 0.5/1/2 chỉ.
+- Cà phê lấy từ trang Đắk Lắk của Giacaphe.com. Trang đặt các con số trong CSS `::after`; chương trình đọc các giá trị này và ghép đúng với ngày ở từng dòng bảng.
 - Hồ tiêu lấy từ bảng giá của Giacaphe.com; trang này ghi nguồn dữ liệu giá là Giatieu.com.
 - Sầu riêng lấy Ri6 và Dona (Thái/Monthong) từ trang Giacaphe.com. Trang đã kiểm tra gần đây vẫn hiển thị bài ngày 27/08/2025, nên mục này sẽ bị đánh dấu dữ liệu cũ cho tới khi nguồn cập nhật.
 - Cấu trúc HTML của nguồn có thể thay đổi. Giá cũ luôn đi kèm ngày nguồn; chương trình không tự tạo hoặc gán ngày mới cho giá cũ.
 
 Trang Giacaphe.com ghi dữ liệu giá chỉ mang tính tham khảo và có thể thay đổi theo thời điểm, khu vực hoặc đơn vị thu mua. Báo cáo gom các liên kết nguồn ở cuối tin nhắn để dễ đọc; từng dòng giá giữ ngày nguồn tương ứng.
+
+Chạy `python -m unittest -q` để kiểm tra hai định dạng nguồn và việc giữ ngày của giá cũ. Workflow chạy kiểm tra này trước khi gửi và in bản tin đã gửi vào log để đối chiếu. Nguồn vẫn có thể từ chối kết nối; khi đó bot dùng cache có ngày như trên.
