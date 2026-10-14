@@ -31,7 +31,7 @@ Không gửi token bot trong tin nhắn hoặc đưa file `.env` lên Git.
 
 ## Chạy hằng ngày trên GitHub Actions
 
-GitHub Actions chạy workflow trên máy chủ của GitHub, nên máy tính cá nhân không cần bật. Workflow trong `.github/workflows/daily.yml` được đặt mặc định gửi lúc **09:37 mỗi ngày theo giờ Việt Nam**; có thể chạy thử thủ công từ tab **Actions**.
+GitHub Actions chạy workflow trên máy chủ của GitHub, nên máy tính cá nhân không cần bật. Workflow trong `.github/workflows/daily.yml` được đặt mặc định gửi lúc **05:00 mỗi ngày theo giờ Việt Nam**; có thể chạy thử thủ công từ tab **Actions**.
 
 Workflow lưu các giá có ngày nguồn trong GitHub Actions cache để dùng lại khi trang nguồn không tải được hoặc thiếu giá. Cache không chứa token. Nếu cache bị xóa, nguồn vẫn lỗi và mục đó không có bản khởi tạo, báo cáo sẽ ghi rõ chưa có giá cũ để dùng.
 

@@ -2,7 +2,7 @@ name: Daily price report
 
 on:
   schedule:
-    - cron: "37 9 * * *"
+    - cron: "0 5 * * *"
       timezone: Asia/Ho_Chi_Minh
   workflow_dispatch:
 
