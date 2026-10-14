@@ -29,6 +29,7 @@ TIMEOUT_SECONDS = 20
 MAX_HTML_BYTES = 5_000_000
 FRESHNESS_DAYS = 3
 CACHE_PATH = ROOT / "price_cache.json"
+SEED_CACHE_PATH = ROOT / "initial_prices.json"
 
 SOURCES = {
     "gold": "https://sjc.com.vn/",
@@ -182,13 +183,21 @@ def page_source_date(page: PageParser) -> date | None:
 
 
 def fetch_content(url: str, data: bytes | None = None) -> str:
+    headers = {
+        "User-Agent": "PriceWatchTelegram/1.0 (daily public price digest)",
+        "Accept": "text/html,application/xhtml+xml,application/json",
+    }
+    if data is not None:
+        headers.update({
+            "Accept": "application/json",
+            "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
+            "Referer": SOURCES["gold"],
+            "X-Requested-With": "XMLHttpRequest",
+        })
     request = Request(
         url,
         data=data,
-        headers={
-            "User-Agent": "PriceWatchTelegram/1.0 (daily public price digest)",
-            "Accept": "text/html,application/xhtml+xml,application/json",
-        },
+        headers=headers,
     )
     try:
         with urlopen(request, timeout=TIMEOUT_SECONDS) as response:
@@ -339,9 +348,9 @@ def load_dotenv() -> None:
         os.environ.setdefault(key.strip(), value.strip().strip('"').strip("'"))
 
 
-def load_price_cache() -> dict[str, Quote]:
+def load_price_cache(path: Path | None = None) -> dict[str, Quote]:
     try:
-        payload = json.loads(CACHE_PATH.read_text(encoding="utf-8"))
+        payload = json.loads((path or CACHE_PATH).read_text(encoding="utf-8"))
     except FileNotFoundError:
         return {}
     except (OSError, json.JSONDecodeError) as exc:
@@ -442,7 +451,9 @@ def format_sources() -> str:
 
 def build_report() -> str:
     local_now = datetime.now(LOCAL_TZ)
-    quote_cache = load_price_cache()
+    quote_cache = load_price_cache(SEED_CACHE_PATH)
+    for saved_quote in load_price_cache().values():
+        use_latest_dated_quote(saved_quote, quote_cache)
     quote_groups: list[Quote] = []
     parsers = (parse_gold, parse_coffee, parse_pepper, parse_durian)
     for parser in parsers:

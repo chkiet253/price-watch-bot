@@ -33,7 +33,9 @@ Không gửi token bot trong tin nhắn hoặc đưa file `.env` lên Git.
 
 GitHub Actions chạy workflow trên máy chủ của GitHub, nên máy tính cá nhân không cần bật. Workflow trong `.github/workflows/daily.yml` được đặt mặc định gửi lúc **09:37 mỗi ngày theo giờ Việt Nam**; có thể chạy thử thủ công từ tab **Actions**.
 
-Workflow lưu các giá có ngày nguồn trong GitHub Actions cache để dùng lại khi trang nguồn không tải được hoặc thiếu giá. Cache không chứa token. Nếu cache bị xóa và nguồn vẫn lỗi, báo cáo sẽ ghi rõ chưa có giá cũ để dùng.
+Workflow lưu các giá có ngày nguồn trong GitHub Actions cache để dùng lại khi trang nguồn không tải được hoặc thiếu giá. Cache không chứa token. Nếu cache bị xóa, nguồn vẫn lỗi và mục đó không có bản khởi tạo, báo cáo sẽ ghi rõ chưa có giá cũ để dùng.
+
+`initial_prices.json` chứa giá vàng đã đọc thành công từ SJC, có ngày nguồn, để khởi tạo giá dự phòng khi SJC từ chối máy chủ GitHub bằng lỗi 403. Bot vẫn thử lấy giá SJC mỗi lần chạy; chỉ dùng bản lưu khi nguồn lỗi và ghi rõ "giá gần nhất đã lưu". Cache hoặc giá mới hơn sẽ thay thế bản khởi tạo. File này không phải giá cập nhật tự động.
 
 1. Tạo một repository **private** trên GitHub.
 2. Tải các file trong thư mục này lên repository, gồm cả thư mục `.github/workflows`. Không tải file `.env` lên GitHub.

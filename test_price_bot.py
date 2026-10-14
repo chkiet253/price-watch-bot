@@ -2,13 +2,32 @@
 
 import json
 import unittest
+import tempfile
 from datetime import date
+from pathlib import Path
 from unittest.mock import patch
 
 import price_bot as bot
 
 
 class SourceChecks(unittest.TestCase):
+    def test_sjc_seed_survives_source_failure_without_losing_its_date(self):
+        seed = bot.Quote("Vàng SJC", "mua 14,030,000 / bán 14,333,000", "đồng/chỉ",
+                         bot.SOURCES["gold"], date(2026, 10, 14))
+        with tempfile.TemporaryDirectory() as folder:
+            path = Path(folder) / "quotes.json"
+            with patch.object(bot, "CACHE_PATH", path):
+                bot.save_price_cache({seed.name: seed})
+            cache = bot.load_price_cache(path)
+        older = bot.Quote(seed.name, "mua 14,100,000 / bán 14,400,000", seed.unit,
+                          seed.source, date(2026, 10, 13))
+        bot.use_latest_dated_quote(older, cache)
+        missing = bot.Quote(seed.name, None, seed.unit, seed.source, None)
+        result = bot.use_latest_dated_quote(missing, cache)
+        self.assertTrue(result.cached)
+        self.assertEqual(result.value, seed.value)
+        self.assertEqual(result.source_date, seed.source_date)
+
     def test_coffee_css_prices_stay_attached_to_their_row_dates(self):
         page = bot.parse_page("""
             <style>

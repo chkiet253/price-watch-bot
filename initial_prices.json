@@ -1,0 +1,11 @@
+{
+  "quotes": {
+    "Vàng SJC": {
+      "value": "mua 14,030,000 / bán 14,333,000",
+      "unit": "đồng/chỉ",
+      "source": "https://sjc.com.vn/",
+      "source_date": "2026-10-14",
+      "note": "Giá đọc trực tiếp từ dịch vụ dữ liệu SJC khi khởi tạo bản dự phòng ngày 14/10/2026."
+    }
+  }
+}
